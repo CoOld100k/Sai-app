@@ -17,22 +17,29 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Extract Zip and Setup Project
+      - name: Extract Any Zip File Automatically
         run: |
-          for f in *.zip; do
-            if [ -f "$f" ]; then
-              echo "Extracting $f..."
-              unzip -o "$f"
-            fi
-          done
+          # البحث عن أي ملف مضغوط zip واستخراجه تلقائياً
+          ZIP_FILE=$(find . -maxdepth 2 -iname "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Extracting: $ZIP_FILE"
+            unzip -o "$ZIP_FILE"
+          else
+            echo "No zip file found!"
+          fi
 
-          PUBSPEC=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
+          # البحث عن ملف pubspec.yaml ونقل كافة الملفات للمجلد الرئيسي
+          PUBSPEC=$(find . -iname "pubspec.yaml" -print -quit)
           if [ -n "$PUBSPEC" ]; then
             DIR=$(dirname "$PUBSPEC")
+            echo "Project directory found at: $DIR"
             if [ "$DIR" != "." ]; then
-              echo "Moving files from $DIR to root..."
+              shopt -s dotglob
               cp -rf "$DIR"/* .
             fi
+          else
+            echo "ERROR: pubspec.yaml missing!"
+            exit 1
           fi
 
       - uses: subosito/flutter-action@v2
