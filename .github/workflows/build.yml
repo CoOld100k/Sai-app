@@ -17,42 +17,29 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Extract Any Zip File Automatically
-        run: |
-          # البحث عن أي ملف مضغوط zip واستخراجه تلقائياً
-          ZIP_FILE=$(find . -maxdepth 2 -iname "*.zip" | head -n 1)
-          if [ -n "$ZIP_FILE" ]; then
-            echo "Extracting: $ZIP_FILE"
-            unzip -o "$ZIP_FILE"
-          else
-            echo "No zip file found!"
-          fi
-
-          # البحث عن ملف pubspec.yaml ونقل كافة الملفات للمجلد الرئيسي
-          PUBSPEC=$(find . -iname "pubspec.yaml" -print -quit)
-          if [ -n "$PUBSPEC" ]; then
-            DIR=$(dirname "$PUBSPEC")
-            echo "Project directory found at: $DIR"
-            if [ "$DIR" != "." ]; then
-              shopt -s dotglob
-              cp -rf "$DIR"/* .
-            fi
-          else
-            echo "ERROR: pubspec.yaml missing!"
-            exit 1
-          fi
-
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+      - name: Extract Zip and Build APK
+        run: |
+          # فك ضغط الملف
+          unzip -o *.zip || true
+          
+          # تحديد مجلد المشروع الذي يحتوي على pubspec.yaml
+          PROJECT_DIR=$(dirname $(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1))
+          echo "Project directory is: $PROJECT_DIR"
+          
+          # الدخول للمجلد والتنفيذ داخله مباشرة
+          cd "$PROJECT_DIR"
+          flutter pub get
+          flutter build apk --release --no-tree-shake-icons
+          
+          # نقل الـ APK الناتج لمكان التنزيل
+          mkdir -p $GITHUB_WORKSPACE/output
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/app-release.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: output/app-release.apk
