@@ -17,29 +17,43 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - uses: subosito/flutter-action@v2
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Extract Zip and Build APK
+      - name: Auto-Detect Project and Build APK
         run: |
-          # فك ضغط الملف
-          unzip -o *.zip || true
-          
-          # تحديد مجلد المشروع الذي يحتوي على pubspec.yaml
-          PROJECT_DIR=$(dirname $(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1))
-          echo "Project directory is: $PROJECT_DIR"
-          
-          # الدخول للمجلد والتنفيذ داخله مباشرة
+          # 1. البحث عن أي ملف مضغوط وفك ضغطه تلقائياً إن وجد
+          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "تم العثور على ملف مضغوط: $ZIP_FILE - جاري فك الضغط..."
+            unzip -o "$ZIP_FILE"
+          fi
+
+          # 2. البحث عن مكان وجود ملف pubspec.yaml في أي مكان بالخادم
+          PUBSPEC_PATH=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
+
+          if [ -z "$PUBSPEC_PATH" ]; then
+            echo "خطأ: لم يتم العثور على ملف pubspec.yaml!"
+            exit 1
+          fi
+
+          # 3. الدخول لمجلد المشروع الحقيقي
+          PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+          echo "مسار المشروع المقروء هو: $PROJECT_DIR"
           cd "$PROJECT_DIR"
+
+          # 4. جلب المكتبات وبناء الـ APK
           flutter pub get
           flutter build apk --release --no-tree-shake-icons
-          
-          # نقل الـ APK الناتج لمكان التنزيل
-          mkdir -p $GITHUB_WORKSPACE/output
-          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/app-release.apk
 
-      - uses: actions/upload-artifact@v4
+          # 5. تجهيز ملف الـ APK النهائي للتنزيل
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          find build/ -name "*.apk" -exec cp {} "$GITHUB_WORKSPACE/output/app-release.apk" \;
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: output/app-release.apk
