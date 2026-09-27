@@ -11,17 +11,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Extract Zip File
         run: |
           if [ -f sai_app.zip ]; then
             unzip -o sai_app.zip
           fi
-          if [ ! -f pubspec.yaml ]; then
-            find . -maxdepth 2 -name "pubspec.yaml" -exec dirname {} \; | while read dir; do
-              if [ "$dir" != "." ]; then
-                mv $dir/* . 2>/dev/null || true
-              fi
-            done
+          PUBSPEC_PATH=$(find . -name "pubspec.yaml" | head -n 1)
+          if [ -n "$PUBSPEC_PATH" ]; then
+            DIR=$(dirname "$PUBSPEC_PATH")
+            if [ "$DIR" != "." ]; then
+              cp -r "$DIR"/* .
+            fi
           fi
 
       - uses: subosito/flutter-action@v2
@@ -38,3 +44,4 @@ jobs:
         with:
           name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
+
