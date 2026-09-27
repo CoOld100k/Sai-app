@@ -22,21 +22,22 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Extract Zip and Build APK
+      - name: Extract and Build APK
         run: |
-          # 1. فك ضغط الملف
+          # 1. فك ضغط الملف sai_app.zip
           unzip -o sai_app.zip
 
-          # 2. الدخول لمجلد sai_app الداخلي
-          if [ -d "sai_app" ]; then
-            cd sai_app
-          fi
+          # 2. الدخول للمجلد الداخلي sai_app
+          cd sai_app
 
-          # 3. بناء التطبيق من داخل مجلد المشروع
+          # 3. عرض الملفات للتأكد
+          ls -la
+
+          # 4. جلب مكتبات مشروع الفلاتر وبناء الـ APK
           flutter pub get
           flutter build apk --release --no-tree-shake-icons
 
-          # 4. نقل ملف الـ APK الناتج للخارج لتسهيل تنزيله
+          # 5. نقل ملف الـ APK إلى المجلد الخارجي للتحميل
           mkdir -p $GITHUB_WORKSPACE/output
           cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/app-release.apk
 
