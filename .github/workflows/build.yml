@@ -17,16 +17,21 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Extract Zip File
+      - name: Extract Zip and Setup Project
         run: |
-          if [ -f sai_app.zip ]; then
-            unzip -o sai_app.zip
-          fi
-          PUBSPEC_PATH=$(find . -name "pubspec.yaml" | head -n 1)
-          if [ -n "$PUBSPEC_PATH" ]; then
-            DIR=$(dirname "$PUBSPEC_PATH")
+          for f in *.zip; do
+            if [ -f "$f" ]; then
+              echo "Extracting $f..."
+              unzip -o "$f"
+            fi
+          done
+
+          PUBSPEC=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
+          if [ -n "$PUBSPEC" ]; then
+            DIR=$(dirname "$PUBSPEC")
             if [ "$DIR" != "." ]; then
-              cp -r "$DIR"/* .
+              echo "Moving files from $DIR to root..."
+              cp -rf "$DIR"/* .
             fi
           fi
 
@@ -38,10 +43,9 @@ jobs:
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
-
