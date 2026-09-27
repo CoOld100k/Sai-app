@@ -1,0 +1,40 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract Zip File
+        run: |
+          if [ -f sai_app.zip ]; then
+            unzip -o sai_app.zip
+          fi
+          if [ ! -f pubspec.yaml ]; then
+            find . -maxdepth 2 -name "pubspec.yaml" -exec dirname {} \; | while read dir; do
+              if [ "$dir" != "." ]; then
+                mv $dir/* . 2>/dev/null || true
+              fi
+            done
+          fi
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
