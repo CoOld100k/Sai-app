@@ -22,27 +22,29 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Extract and Build APK
+      - name: Extract Zip and Flatten Files
         run: |
-          # 1. فك ضغط الملف sai_app.zip
-          unzip -o sai_app.zip
+          # 1. فك ضغط ملف الـ ZIP
+          unzip -o *.zip
 
-          # 2. الدخول للمجلد الداخلي sai_app
-          cd sai_app
+          # 2. البحث عن مكان pubspec.yaml وتحديده تلقائياً
+          PUBSPEC=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
 
-          # 3. عرض الملفات للتأكد
-          ls -la
+          # 3. نقل كل ملفات المشروع إلى المجلد الرئيسي فوراً
+          PROJECT_DIR=$(dirname "$PUBSPEC")
+          echo "تم العثور على الملفات في: $PROJECT_DIR"
+          
+          if [ "$PROJECT_DIR" != "." ]; then
+            cp -rf "$PROJECT_DIR"/* .
+          fi
 
-          # 4. جلب مكتبات مشروع الفلاتر وبناء الـ APK
+      - name: Install Dependencies & Build APK
+        run: |
           flutter pub get
           flutter build apk --release --no-tree-shake-icons
-
-          # 5. نقل ملف الـ APK إلى المجلد الخارجي للتحميل
-          mkdir -p $GITHUB_WORKSPACE/output
-          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/app-release.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: output/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
