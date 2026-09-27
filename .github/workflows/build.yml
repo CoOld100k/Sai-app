@@ -22,35 +22,23 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Auto-Detect Project and Build APK
+      - name: Extract Zip and Build APK
         run: |
-          # 1. البحث عن أي ملف مضغوط وفك ضغطه تلقائياً إن وجد
-          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
-          if [ -n "$ZIP_FILE" ]; then
-            echo "تم العثور على ملف مضغوط: $ZIP_FILE - جاري فك الضغط..."
-            unzip -o "$ZIP_FILE"
+          # 1. فك ضغط الملف
+          unzip -o sai_app.zip
+
+          # 2. الدخول لمجلد sai_app الداخلي
+          if [ -d "sai_app" ]; then
+            cd sai_app
           fi
 
-          # 2. البحث عن مكان وجود ملف pubspec.yaml في أي مكان بالخادم
-          PUBSPEC_PATH=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
-
-          if [ -z "$PUBSPEC_PATH" ]; then
-            echo "خطأ: لم يتم العثور على ملف pubspec.yaml!"
-            exit 1
-          fi
-
-          # 3. الدخول لمجلد المشروع الحقيقي
-          PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
-          echo "مسار المشروع المقروء هو: $PROJECT_DIR"
-          cd "$PROJECT_DIR"
-
-          # 4. جلب المكتبات وبناء الـ APK
+          # 3. بناء التطبيق من داخل مجلد المشروع
           flutter pub get
           flutter build apk --release --no-tree-shake-icons
 
-          # 5. تجهيز ملف الـ APK النهائي للتنزيل
-          mkdir -p "$GITHUB_WORKSPACE/output"
-          find build/ -name "*.apk" -exec cp {} "$GITHUB_WORKSPACE/output/app-release.apk" \;
+          # 4. نقل ملف الـ APK الناتج للخارج لتسهيل تنزيله
+          mkdir -p $GITHUB_WORKSPACE/output
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/app-release.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
